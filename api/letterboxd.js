@@ -77,6 +77,11 @@ export default async function handler(req, res) {
     let title = originalTitle;
     const TMDB_KEY = process.env.TMDB_API_KEY;
 
+    // O Letterboxd embute a nota do usuário no fim do título (ex: "Nome, 2026 - ★★★").
+    // Preserva esse sufixo pro front-end continuar extraindo as estrelas certinho.
+    const ratingMatch = originalTitle.match(/\s*[-–—:|•·]\s*([★☆½]+)\s*$/);
+    const ratingSuffix = ratingMatch ? ` - ${ratingMatch[1]}` : '';
+
     // Busca o título oficial em português na TMDB, mesma fonte usada no bloco de séries
     if (tmdbId && TMDB_KEY) {
       try {
@@ -88,7 +93,9 @@ export default async function handler(req, res) {
           if ((tmdbResponse.headers.get('content-type') || '').includes('application/json')) {
             const tmdbData = JSON.parse(tmdbText);
             if (tmdbData.title) {
-              title = filmYear ? `${tmdbData.title}, ${filmYear}` : tmdbData.title;
+              title = filmYear
+                ? `${tmdbData.title}, ${filmYear}${ratingSuffix}`
+                : `${tmdbData.title}${ratingSuffix}`;
             }
           }
         }
