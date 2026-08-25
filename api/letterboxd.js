@@ -51,8 +51,7 @@ export default async function handler(req, res) {
     const parser = new XMLParser({
       ignoreAttributes: true,
       cdataPropName: '__cdata',
-      textNodeName: '__text',
-      removeNSPrefix: false
+      textNodeName: '__text'
     });
 
     const parsed = parser.parse(xmlText);
@@ -65,44 +64,12 @@ export default async function handler(req, res) {
       });
     }
 
-    const originalTitle = readField(firstItem.title).replace(', watched by kennowiski', '');
+    const title = readField(firstItem.title).replace(', watched by kennowiski', '');
     const link = readField(firstItem.link);
     const description = readField(firstItem.description);
-    const filmYear = readField(firstItem['letterboxd:filmYear']);
-    const tmdbId = readField(firstItem['tmdb:movieId']);
 
     const imgMatch = description.match(/<img[^>]+src="([^"]+)"/);
     const poster = imgMatch ? imgMatch[1] : FALLBACK_POSTER;
-
-    let title = originalTitle;
-    const TMDB_KEY = process.env.TMDB_API_KEY;
-
-    // O Letterboxd embute a nota do usuário no fim do título (ex: "Nome, 2026 - ★★★").
-    // Preserva esse sufixo pro front-end continuar extraindo as estrelas certinho.
-    const ratingMatch = originalTitle.match(/\s*[-–—:|•·]\s*([★☆½]+)\s*$/);
-    const ratingSuffix = ratingMatch ? ` - ${ratingMatch[1]}` : '';
-
-    // Busca o título oficial em português na TMDB, mesma fonte usada no bloco de séries
-    if (tmdbId && TMDB_KEY) {
-      try {
-        const tmdbResponse = await fetch(
-          `https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${TMDB_KEY}&language=pt-BR`
-        );
-        if (tmdbResponse.ok) {
-          const tmdbText = await tmdbResponse.text();
-          if ((tmdbResponse.headers.get('content-type') || '').includes('application/json')) {
-            const tmdbData = JSON.parse(tmdbText);
-            if (tmdbData.title) {
-              title = filmYear
-                ? `${tmdbData.title}, ${filmYear}${ratingSuffix}`
-                : `${tmdbData.title}${ratingSuffix}`;
-            }
-          }
-        }
-      } catch (tmdbError) {
-        console.error('Erro ao buscar título em pt-BR na TMDB:', tmdbError.message);
-      }
-    }
 
     return res.status(200).json({
       title,
